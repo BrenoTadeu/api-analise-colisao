@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  # 1. Banco de Dados com credenciais e volumes inéditos (Sem chance de pegar cache)
+  postgres:
+    image: postgres:15-alpine
+    container_name: evolution_db_novo
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=evolution_user
+      - POSTGRES_PASSWORD=evolution_pass_123
+      - POSTGRES_DB=evolution_oficial
+    volumes:
+      - volume_postgres_definitivo:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evolution_user -d evolution_oficial"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+  # 2. A Evolution API sincronizada perfeitamente
+  evolution-api:
+    image: atendai/evolution-api:latest
+    container_name: evolution-api-novo
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - AUTHENTICATION_TYPE=apikey
+      - AUTHENTICATION_API_KEY=breno@banco
+      - DATABASE_PROVIDER=postgresql
+      - DATABASE_CONNECTION_CLIENT=pg
+      - DATABASE_CONNECTION_HOST=postgres
+      - DATABASE_CONNECTION_PORT=5432
+      - DATABASE_CONNECTION_USER=evolution_user
+      - DATABASE_CONNECTION_PASSWORD=evolution_pass_123
+      - DATABASE_CONNECTION_DATABASE=evolution_oficial
+      - DATABASE_URL=postgresql://evolution_user:evolution_pass_123@postgres:5432/evolution_oficial?schema=public
+    volumes:
+      - volume_instances_definitivo:/evolution/instances
+    restart: always
+
+volumes:
+  volume_instances_definitivo:
+  volume_postgres_definitivo:
